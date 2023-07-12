@@ -19,6 +19,7 @@ public class S3Config {
 
     @Bean
     public S3Client s3Client() {
+        // select region check in bucket
         Region region = Region.EU_WEST_1;
         AwsCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
         S3Client s3Client = S3Client.builder()

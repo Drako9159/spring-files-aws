@@ -29,6 +29,7 @@ public class S3ServiceImpl implements IS3Service {
         this.s3Client = s3Client;
     }
 
+    @Override
     public String uploadFile(MultipartFile file) throws IOException {
         try {
             String fileName = file.getOriginalFilename();
@@ -44,6 +45,7 @@ public class S3ServiceImpl implements IS3Service {
     }
 
 
+    @Override
     public String downloadFile(String fileName) throws IOException {
         if (!doesObjectExists(fileName)) {
             return "File does not exist!";
@@ -66,21 +68,79 @@ public class S3ServiceImpl implements IS3Service {
         return "File downloaded!!";
     }
 
+    @Override
     public List<String> listFiles() throws IOException {
-        try{
+        try {
             ListObjectsRequest listObjectsRequest = ListObjectsRequest.builder()
                     .bucket("bucket-youtube-dif")
                     .build();
             List<S3Object> objects = s3Client.listObjects(listObjectsRequest).contents();
             List<String> fileNames = new ArrayList<>();
-            for(S3Object object: objects){
+            for (S3Object object : objects) {
                 fileNames.add(object.key());
             }
             return fileNames;
-        } catch (S3Exception e){
+        } catch (S3Exception e) {
             throw new IOException(e.getMessage());
         }
     }
+
+    @Override
+    public String renameFile(String oldFileName, String newFileName) throws IOException {
+        if (!doesObjectExists(oldFileName)) {
+            return "File does not exist!";
+        }
+        try {
+            CopyObjectRequest copyObjectRequest = CopyObjectRequest.builder()
+                    .destinationBucket("bucket-youtube-dif")
+                    .copySource("bucket-youtube-dif" + "/" + oldFileName)
+                    .destinationKey(newFileName)
+                    .build();
+            s3Client.copyObject(copyObjectRequest);
+            deleteFile(oldFileName);
+            return "File renamed to " + newFileName + " successfully!";
+        } catch (S3Exception e) {
+            throw new IOException(e.getMessage());
+        }
+    }
+
+    @Override
+    public String updateFile(MultipartFile file, String oldFileName) throws IOException {
+        if (!doesObjectExists(oldFileName)) {
+            return "File does not exist!";
+        }
+        try {
+            String newFileName = file.getOriginalFilename();
+            deleteFile(oldFileName);
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket("bucket-youtube-dif")
+                    .key(newFileName)
+                    .build();
+            s3Client.putObject(putObjectRequest, RequestBody.fromBytes(file.getBytes()));
+            return "File updated successfully!!";
+        } catch (S3Exception e) {
+            throw new IOException(e.getMessage());
+        }
+    }
+
+    @Override
+    public String deleteFile(String fileName) throws IOException {
+        if (!doesObjectExists(fileName)) {
+            return "File does not exist!";
+        }
+        try {
+            DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+                    .bucket("bucket-youtube-dir")
+                    .key(fileName)
+                    .build();
+            s3Client.deleteObject(deleteObjectRequest);
+            return "File deleted successfully!";
+        } catch (S3Exception e) {
+            throw new IOException(e.getMessage());
+
+        }
+    }
+
 
     private boolean doesObjectExists(String objectKey) {
         try {
